@@ -28,13 +28,13 @@ module.exports = {
       throwOnTransactionFailures:true,
       throwOnCallFailures:true,
     },
-    huobi: {
+    huobi_radio: {
       url: "https://http-mainnet-node.huobichain.com",
       chainId: 128,
       gas:3000000,
       gasPrice:9000000000,
       accounts: {
-        mnemonic: 'test test test test test test test test test test test jun',
+        mnemonic: 'test test test test test test test test test test test junk',
         initialIndex: 0,
         path:"m/44'/60'/0'/0",
         count:10,

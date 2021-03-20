@@ -48,33 +48,40 @@ import './LPTokenWrapper.sol';
 
 contract Pool is LPTokenWrapper, Ownable
 {
-    IERC20 public radio;
+    IERC20 public token;
     uint256 constant public OneDay = 1 days;
+    uint256 constant public Percent = 100;
 
     uint256 public starttime;
     uint256 public periodFinish = 0;
+    //note that, you should combine the bonus rate to get the final production rate
     uint256 public rewardRate = 0;
     uint256 public lastUpdateTime;
     uint256 public rewardPerTokenStored;
     mapping(address => uint256) public userRewardPerTokenPaid;
     mapping(address => uint256) public rewards;
+    mapping(address => uint256) public accumulatedRewards;
     address public minerOwner;
-
     event RewardAdded(uint256 reward);
     event Staked(address indexed user, uint256 amount);
     event Withdrawn(address indexed user, uint256 amount);
     event RewardPaid(address indexed user, uint256 reward);
+    event TransferBack(address token, address to, uint256 amount);
 
     constructor(
-        address radio_,
-        address lptoken_,
-        uint256 starttime_,
-        address minerOwner_
+        address _token,
+        address _lptoken,
+        uint256 _starttime,
+        address _minerOwner
     ) public {
-        radio = IERC20(radio_);
-        lpt = IERC20(lptoken_);
-        starttime = starttime_;
-        minerOwner = minerOwner_;
+        require(_token != address(0), "_token is zero address");
+        require(_lptoken != address(0), "_lptoken is zero address");
+        require(_minerOwner != address(0), "_minerOwner is zero address");
+
+        token = IERC20(_token);
+        lpt = IERC20(_lptoken);
+        starttime = _starttime;
+        minerOwner = _minerOwner;
     }
 
     modifier updateReward(address account) {
@@ -146,27 +153,41 @@ contract Pool is LPTokenWrapper, Ownable
 
     }
 
+    //hook the bonus when user getReward
     function getReward() public updateReward(msg.sender) checkStart {
         uint256 reward = earned(msg.sender);
         if (reward > 0) {
             rewards[msg.sender] = 0;
-            radio.safeTransferFrom(minerOwner, msg.sender, reward);
+            token.safeTransferFrom(minerOwner, msg.sender, reward);
             emit RewardPaid(msg.sender, reward);
+            accumulatedRewards[msg.sender] = accumulatedRewards[msg.sender].add(reward);
         }
     }
 
-    function transferBack(address back, uint256 amount) external onlyOwner {
-        radio.safeTransfer(back, amount);
+    function transferBack(IERC20 erc20Token, address to, uint256 amount) external onlyOwner {
+        require(erc20Token != lpt,"For LPT, transferBack is not allowed, if you transfer LPT by mistake, sorry");
+
+        if(address(erc20Token) == address (0)){
+            payable(to).transfer(amount);
+        }else{
+            erc20Token.safeTransfer(to, amount);
+        }
+        emit TransferBack(address (erc20Token), to, amount);
     }
 
-    function initSet(uint256 rewardPerDay, uint256 _periodFinish)
+
+    //you can call this function many time as long as block.number does not reach starttime and _starttime
+    function initSet(uint256 _starttime, uint256 rewardPerDay, uint256 _periodFinish)
     external
     onlyOwner
     updateReward(address(0))
     {
         require(block.timestamp < starttime, "block.timestamp < starttime");
-        require(starttime < _periodFinish, "starttime < _periodFinish");
 
+        require(block.timestamp < _starttime, "block.timestamp < _starttime");
+        require(_starttime < _periodFinish, "_starttime < _periodFinish");
+
+        starttime = _starttime;
         rewardRate = rewardPerDay.div(OneDay);
         periodFinish = _periodFinish;
         lastUpdateTime = starttime;
@@ -185,8 +206,11 @@ contract Pool is LPTokenWrapper, Ownable
         require(block.timestamp <= _periodFinish, "block.timestamp <= _periodFinish");
 
         rewardRate = rewardPerDay.div(OneDay);
-
         periodFinish = _periodFinish;
         lastUpdateTime = block.timestamp;
+    }
+
+    function changeMinerOwner(address _minerOwner) external onlyOwner{
+        minerOwner = _minerOwner;
     }
 }
