@@ -67,6 +67,7 @@ contract Pool is LPTokenWrapper, Ownable
     event Withdrawn(address indexed user, uint256 amount);
     event RewardPaid(address indexed user, uint256 reward);
     event TransferBack(address token, address to, uint256 amount);
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     constructor(
         address _token,
@@ -211,6 +212,8 @@ contract Pool is LPTokenWrapper, Ownable
     }
 
     function changeMinerOwner(address _minerOwner) external onlyOwner{
+        require(_minerOwner != address(0), "new owner should not be the zero address");
+        emit OwnershipTransferred(minerOwner, _minerOwner);
         minerOwner = _minerOwner;
     }
 }
