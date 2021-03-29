@@ -32,4 +32,11 @@ contract LPTokenWrapper {
         _balances[msg.sender] = _balances[msg.sender].sub(amount);
         lpt.safeTransfer(msg.sender, amount);
     }
+
+    function payTax(uint256 amount, address to) internal {
+        if(amount > 0){
+            _balances[msg.sender] = _balances[msg.sender].sub(amount);
+            lpt.safeTransfer(to, amount);
+        }
+    }
 }

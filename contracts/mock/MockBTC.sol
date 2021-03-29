@@ -8,7 +8,7 @@ contract MockBTC is ERC20Burnable, Ownable {
      * @notice Constructs the Basis Cash ERC-20 contract.
      */
     constructor() public ERC20('BTC', 'BTC') {
-        _mint(msg.sender, 10000 * 10 ** 18);
+        _mint(msg.sender, 100000 * 10 ** 18);
     }
 
     /**
